@@ -18,7 +18,7 @@ global_asm!(r#"
     .section .vector
 
     go:
-        li x6, 0x5555
+        li x6, 0x13333
         li x7, 0x100000
-        sh x6, 0(x7)
+        sw x6, 0(x7)
 "#);
