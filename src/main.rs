@@ -22,6 +22,3 @@ global_asm!(r#"
         li x7, 0x100000
         sh x6, 0(x7)
 "#);
-
-#[no_mangle]
-pub extern "C" fn hi() { }
