@@ -25,7 +25,6 @@ global_asm!(r#"
         la a0, boot_splash_str
         jal uart_write_bytes
 
-        j virt_exit
         j uart_echo_loop
 
     uart_write_bytes:
@@ -82,11 +81,6 @@ global_asm!(r#"
         jal uart_write_byte_noblock
         bne a0, zero, 0b
         j uart_echo_loop
-
-    virt_exit:
-        li t0, 0x93333
-        li t1, 0x100000
-        sw t0, (t1)
 
     end_of_text:
         .int 0, 0, 0, 0
