@@ -4,6 +4,7 @@
 #![feature(global_asm)]
 
 use core::panic::PanicInfo;
+use core::ptr::{read_volatile, write_volatile};
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -12,81 +13,68 @@ fn panic(_info: &PanicInfo) -> ! {
     }
 }
 
+static UART0_BASE: usize = 0x10000000;
+
+struct Uart(*mut u8);
+
+impl Uart {
+    fn try_write_byte(&self, x: u8) -> bool {
+        let base = self.0;
+        unsafe {
+            let line_status_register = read_volatile(base.wrapping_offset(5));
+            let ready = line_status_register & (1<<5) != 0; // THRE
+            if ready {
+                write_volatile(base, x);
+            }
+            return ready;
+        }
+    }
+
+    fn write_byte(&self, x: u8) {
+        while !self.try_write_byte(x) { /* spin */ }
+    }
+
+    fn try_read_byte(&self) -> Option<u8> {
+        let base = self.0;
+        unsafe {
+            let line_status_register = read_volatile(base.wrapping_offset(5));
+            let ready = line_status_register & (1<<0) != 0; // DR
+            if ready {
+                return Some(read_volatile(base));
+            } else {
+                return None;
+            }
+        }
+    }
+
+    fn read_byte(&self) -> u8 {
+        loop {
+            let mx = self.try_read_byte();
+            if let Some(x) = mx {
+                return x;
+            }
+        }
+    }
+}
+
+#[no_mangle]
+extern "C" fn rust_go() -> ! {
+    let u = Uart(UART0_BASE as *mut u8);
+    loop {
+        let x = u.read_byte();
+        u.write_byte(x);
+    }
+}
+
 global_asm!(r#"
-    .global go
-    .global uart_write_byte_noblock
+    .global rust_go
 
     .section .text
 
     .org 0x0
     go:
         li sp, 0x80004000
+        li s0, 0x0 # frame pointer
 
-        la a0, boot_splash_str
-        jal uart_write_bytes
-
-        j uart_echo_loop
-
-    uart_write_bytes:
-        addi sp, sp, -8
-        sd ra, (sp)
-        addi sp, sp, -8
-        sd s0, (sp)
-        mv s0, a0
-    0:
-        lb a0, (s0)
-        beq a0, zero, 2f
-    1:
-        jal uart_write_byte_noblock
-        bne a0, zero, 0b
-        addi s0, s0, 1
-        j 0b
-    2:
-        ld s0, (sp)
-        addi sp, sp, 8
-        ld ra, (sp)
-        addi sp, sp, 8
-        ret
-
-    uart_write_byte_noblock:
-        li t0, 0x10000000
-        lb t1, 5(t0)
-        andi t2, t1, 1<<5  # THRE
-        bne t2, zero, 0f
-        li a0, 1
-        ret
-    0:
-        sb a0, 0(t0)
-        li a0, 0
-        ret
-
-    uart_read_byte_noblock:
-        li t0, 0x10000000
-        lb t1, 5(t0)
-        andi t2, t1, 1<<0  # DR
-        bne t2, zero, 0f
-        li a1, 1
-        ret
-    0:
-        lb a0, 0(t0)
-        li a1, 0
-        ret
-
-    uart_echo_loop:
-        jal uart_read_byte_noblock
-        bne a1, zero, uart_echo_loop
-        mv s0, a0
-    0:
-        mv a0, s0
-        jal uart_write_byte_noblock
-        bne a0, zero, 0b
-        j uart_echo_loop
-
-    end_of_text:
-        .int 0, 0, 0, 0
-
-    .section .rodata
-
-    boot_splash_str:
-        .asciz "=== ashtOSfw ===\r\n"
+        j rust_go
 "#);
