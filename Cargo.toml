@@ -3,7 +3,13 @@ name = "ashtos"
 version = "0.1.0"
 authors = ["ashtneoi <ashtneoi@gmail.com>"]
 edition = "2018"
+build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dtb = "0.2.0"
+
+[build-dependencies]
+dtb = "0.2.0"
+mint-template-engine = "1.2.0-rc.2"
