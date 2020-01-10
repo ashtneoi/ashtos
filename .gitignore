@@ -1,2 +1,6 @@
 /target
 **/*.rs.bk
+
+/link.ld
+/src/go.asm
+/src/constants.rs

@@ -6,14 +6,14 @@
 use core::panic::PanicInfo;
 use core::ptr::{read_volatile, write_volatile};
 
+mod constants;
+
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {
         // do nothing
     }
 }
-
-static UART0_BASE: usize = 0x10000000;
 
 struct Uart(*mut u8);
 
@@ -59,22 +59,11 @@ impl Uart {
 
 #[no_mangle]
 extern "C" fn rust_go() -> ! {
-    let u = Uart(UART0_BASE as *mut u8);
+    let u = Uart(constants::UART0_BASE as *mut u8);
     loop {
         let x = u.read_byte();
         u.write_byte(x);
     }
 }
 
-global_asm!(r#"
-    .global rust_go
-
-    .section .text
-
-    .org 0x0
-    go:
-        li sp, 0x80004000
-        li s0, 0x0 # frame pointer
-
-        j rust_go
-"#);
+global_asm!(include_str!("go.asm"));

@@ -1,0 +1,14 @@
+SECTIONS {
+    . = 0x0;
+    .text : AT ( {{memory_base}} ) {
+        *(.text)
+        HIDDEN(_etext = .);
+    }
+    .data : AT ( _etext ) {
+        *(.data)
+        HIDDEN(_edata = .);
+    }
+    .rodata : AT ( _edata ) {
+        *(.rodata)
+    }
+}

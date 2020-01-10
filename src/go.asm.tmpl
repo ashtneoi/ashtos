@@ -1,0 +1,10 @@
+.global rust_go
+
+.section .text
+
+.org 0x0
+go:
+    li sp, {{memory_base}} + 0x4000
+    li s0, 0x0 # frame pointer
+
+    j rust_go
