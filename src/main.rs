@@ -94,14 +94,18 @@ extern "C" fn rust_go() -> ! {
 
     u.write_bytes(b"machine info:\n");
 
-    u.write_bytes(b"  misa:      0x");
+    // misa //
+
     let maybe_misa = register::misa::read();
+
+    u.write_bytes(b"  misa:      0x");
     let misa_bits = match maybe_misa {
         Some(misa) => misa.bits(),
         None => 0,
     };
     u.write_int_hex(misa_bits, 8);
     u.write_byte('\n' as u8);
+
     if let Some(misa) = maybe_misa {
         u.write_bytes(b"    MXLEN:   ");
         u.write_bytes(match misa.mxl() {
@@ -110,13 +114,12 @@ extern "C" fn rust_go() -> ! {
             MXL::XLEN128 => b"128",
         });
         u.write_byte('\n' as u8);
-    }
-    {
+
         let mut misa_bits = misa_bits;
         if misa_bits & (1<<6) != 0 {
             u.write_bytes(b"    note:    extension bit \"G\" is set\n");
             u.write_bytes(b"             but I don't know how to decode\n");
-            u.write_bytes(b"             additional standard extensions)\n");
+            u.write_bytes(b"             additional standard extensions\n");
             misa_bits &= !(1<<6);
         }
         static G_BITS: usize = (1<<8) | (1<<12) | (1<<0) | (1<<5) | (1<<3);
@@ -134,6 +137,8 @@ extern "C" fn rust_go() -> ! {
     }
     u.write_byte('\n' as u8);
 
+    // mvendorid //
+
     u.write_bytes(b"  mvendorid: 0x");
     let mvendorid = match register::mvendorid::read() {
         Some(x) => x.bits(),
@@ -141,6 +146,8 @@ extern "C" fn rust_go() -> ! {
     };
     u.write_int_hex(mvendorid, 8);
     u.write_byte('\n' as u8);
+
+    // marchid //
 
     u.write_bytes(b"  marchid:   0x");
     let marchid = match register::marchid::read() {
@@ -150,6 +157,8 @@ extern "C" fn rust_go() -> ! {
     u.write_int_hex(marchid, 8);
     u.write_byte('\n' as u8);
 
+    // mimpid //
+
     u.write_bytes(b"  mimpid:    0x");
     let mimpid = match register::mimpid::read() {
         Some(x) => x.bits(),
@@ -157,6 +166,8 @@ extern "C" fn rust_go() -> ! {
     };
     u.write_int_hex(mimpid, 8);
     u.write_byte('\n' as u8);
+
+    // ... //
 
     loop {
         let x = u.read_byte();
