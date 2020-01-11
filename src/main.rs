@@ -187,6 +187,36 @@ extern "C" fn rust_go() -> ! {
 
     u.write_byte('\n' as u8);
 
+    u.write_bytes(b"Switching to vectored interrupts...");
+    let mtvec_addr =
+        constants::RESET_VECTOR + constants::VECTOR_BASE_GAP;
+    unsafe {
+        register::mtvec::write(mtvec_addr, TrapMode::Vectored);
+    }
+    let new_mtvec = register::mtvec::read();
+    let addr_okay = new_mtvec.address() == mtvec_addr;
+    let mode_okay = new_mtvec.trap_mode() == TrapMode::Vectored;
+    if addr_okay && mode_okay {
+        u.write_bytes(b"done.\n");
+    } else {
+        u.write_bytes(b"failed!\n");
+        if !addr_okay {
+            u.write_bytes(b"  - Can't set base address.\n");
+            u.write_bytes(b"    Wanted 0x");
+            u.write_int_hex(mtvec_addr, 16);
+            u.write_bytes(b".\n");
+            u.write_bytes(b"    Got 0x");
+            u.write_int_hex(new_mtvec.address(), 16);
+            u.write_bytes(b".\n");
+        }
+        if !mode_okay {
+            u.write_bytes(
+                b"  - Can't set mode. Wrote vectored, read direct.\n"
+            );
+        }
+        abort();
+    }
+
     loop {
         let x = u.read_byte();
         u.write_byte(x);
