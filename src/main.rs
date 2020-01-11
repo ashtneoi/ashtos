@@ -5,7 +5,8 @@
 
 use core::panic::PanicInfo;
 use core::ptr::{read_volatile, write_volatile};
-use riscv::register;
+
+use riscv::register::{self, misa::MXL};
 
 mod constants;
 
@@ -86,8 +87,6 @@ impl Uart {
 
 #[no_mangle]
 extern "C" fn rust_go() -> ! {
-    use register::misa::MXL;
-
     let u = Uart(constants::UART0_BASE as *mut u8);
 
     u.write_bytes(b"<<<=== ashtOS-fw ===>>>\n");
@@ -104,7 +103,7 @@ extern "C" fn rust_go() -> ! {
     u.write_int_hex(misa_bits, 8);
     u.write_byte('\n' as u8);
     if let Some(misa) = maybe_misa {
-        u.write_bytes(b"    XLEN:    ");
+        u.write_bytes(b"    MXLEN:   ");
         u.write_bytes(match misa.mxl() {
             MXL::XLEN32 => b"32",
             MXL::XLEN64 => b"64",
@@ -149,6 +148,14 @@ extern "C" fn rust_go() -> ! {
         None => 0,
     };
     u.write_int_hex(marchid, 8);
+    u.write_byte('\n' as u8);
+
+    u.write_bytes(b"  mimpid:    0x");
+    let mimpid = match register::mimpid::read() {
+        Some(x) => x.bits(),
+        None => 0,
+    };
+    u.write_int_hex(mimpid, 8);
     u.write_byte('\n' as u8);
 
     loop {
