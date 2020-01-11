@@ -171,7 +171,16 @@ extern "C" fn rust_go() -> ! {
     u.write_int_hex(mimpid, 8);
     u.write_byte('\n' as u8);
 
+    // mcause //
+
+    u.write_bytes(b"  mcause:    0x");
+    let mcause = register::mcause::read().bits();
+    u.write_int_hex(mcause, 8);
+    u.write_byte('\n' as u8);
+
     // ... //
+
+    u.write_byte('\n' as u8);
 
     loop {
         let x = u.read_byte();
