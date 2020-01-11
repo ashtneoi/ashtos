@@ -1,6 +1,9 @@
 SECTIONS {
     . = 0x0;
-    .text : AT ( {{memory_base}} ) {
+    .vec : AT ( {{memory_base}} ) {
+        HIDDEN(_evec = .);
+    }
+    .text : AT ( _evec ) {
         *(.text)
         HIDDEN(_etext = .);
     }

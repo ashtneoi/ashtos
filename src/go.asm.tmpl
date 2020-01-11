@@ -1,9 +1,9 @@
 .global rust_go
 
-.section .text
+.section .vec, "ax"
 
 .org 0x0
-go:
+reset:
     li sp, {{memory_base}} + 0x4000
     li s0, 0x0 # frame pointer
 
