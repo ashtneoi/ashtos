@@ -42,24 +42,29 @@ impl Uart {
         }
     }
 
-    fn write_int_hex(&self, mut x: usize, digit_count: usize) {
-        for i in 0..digit_count {
-            if i % 2 == 0 && i != 0 {
-                self.write_byte('_' as u8);
-            }
-            self.write_byte_hex((x & 0xF) as u8);
-            x >>= 4;
-        }
-    }
-
     /// provisional
-    fn write_byte_hex(&self, x: u8) {
+    fn write_nibble_hex(&self, x: u8) {
         static HEX_DIGITS: &[u8] = &[
             0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
             0x41, 0x42, 0x43, 0x44, 0x45, 0x46
         ];
-        self.write_byte(HEX_DIGITS[(x & 0xF) as usize]);
-        self.write_byte(HEX_DIGITS[(x >> 4) as usize]);
+        self.write_byte(HEX_DIGITS[x as usize]);
+    }
+
+    /// provisional
+    fn write_byte_hex(&self, x: u8) {
+        self.write_nibble_hex(x & 0xF);
+        self.write_nibble_hex(x >> 4);
+    }
+
+    /// provisional
+    fn write_int_hex(&self, mut x: usize, digit_count: usize) {
+        for i in (0..digit_count).rev() {
+            self.write_nibble_hex((((0xF << (4 * i)) & x) >> (4 * i)) as u8);
+            if i % 4 == 0 && i != 0 {
+                self.write_byte('_' as u8);
+            }
+        }
     }
 
     fn try_read_byte(&self) -> Option<u8> {
@@ -107,7 +112,7 @@ extern "C" fn rust_go() -> ! {
         Some(misa) => misa.bits(),
         None => 0,
     };
-    u.write_int_hex(misa_bits, 8);
+    u.write_int_hex(misa_bits, 16);
     u.write_byte('\n' as u8);
 
     if let Some(misa) = maybe_misa {
@@ -148,7 +153,7 @@ extern "C" fn rust_go() -> ! {
         Some(x) => x.bits(),
         None => 0,
     };
-    u.write_int_hex(mvendorid, 8);
+    u.write_int_hex(mvendorid, 16);
     u.write_byte('\n' as u8);
 
     // marchid //
@@ -158,7 +163,7 @@ extern "C" fn rust_go() -> ! {
         Some(x) => x.bits(),
         None => 0,
     };
-    u.write_int_hex(marchid, 8);
+    u.write_int_hex(marchid, 16);
     u.write_byte('\n' as u8);
 
     // mimpid //
@@ -168,14 +173,14 @@ extern "C" fn rust_go() -> ! {
         Some(x) => x.bits(),
         None => 0,
     };
-    u.write_int_hex(mimpid, 8);
+    u.write_int_hex(mimpid, 16);
     u.write_byte('\n' as u8);
 
     // mcause //
 
     u.write_bytes(b"  mcause:    0x");
     let mcause = register::mcause::read().bits();
-    u.write_int_hex(mcause, 8);
+    u.write_int_hex(mcause, 16);
     u.write_byte('\n' as u8);
 
     // ... //
