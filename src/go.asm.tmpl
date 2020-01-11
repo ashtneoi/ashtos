@@ -8,6 +8,8 @@ reset:
 
 .section .text
 
+# TODO: Halt nonzero harts until we're ready for them.
+
 do_reset:
     li sp, {{memory_base}} + 0x4000
     li s0, 0x0 # frame pointer
