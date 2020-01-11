@@ -9,7 +9,9 @@ fn main() {
     // TODO: Don't use `Result::unwrap()`.
 
     let mut environ = HashMap::new();
-    environ.insert("memory_base", "0x80000000");
+    environ.insert("reset_vector", "0x80000000");
+    environ.insert("vector_base_gap", "0x100");
+    environ.insert("stack_base", "0x80004000");
     environ.insert("uart0_base", "0x10000000");
 
     // TODO: Refactor.

@@ -1,6 +1,6 @@
 SECTIONS {
     . = 0x0;
-    .vec : AT ( {{memory_base}} ) {
+    .vec : AT ( {{reset_vector}} ) {
         HIDDEN(_evec = .);
     }
     .text : AT ( _evec ) {

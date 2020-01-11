@@ -2,16 +2,62 @@
 
 .section .vec, "ax"
 
-.org 0x0
+.org 0
 reset:
     j do_reset
+
+.org 0 * 4 + {{vector_base_gap}}
+synchronous_exception:
+    j do_reset
+
+.org 1 * 4 + {{vector_base_gap}}
+supervisor_software_interrupt:
+    j do_reset
+
+.org 2 * 4 + {{vector_base_gap}}
+    j do_reset
+
+.org 3 * 4 + {{vector_base_gap}}
+machine_software_interrupt:
+    j do_reset
+
+.org 4 * 4 + {{vector_base_gap}}
+user_timer_interrupt:
+    j do_reset
+
+.org 5 * 4 + {{vector_base_gap}}
+supervisor_timer_interrupt:
+    j do_reset
+
+.org 6 * 4 + {{vector_base_gap}}
+    j do_reset
+
+.org 7 * 4 + {{vector_base_gap}}
+machine_timer_interrupt:
+    j do_reset
+
+.org 8 * 4 + {{vector_base_gap}}
+user_external_interrupt:
+    j do_reset
+
+.org 9 * 4 + {{vector_base_gap}}
+supervisor_external_interrupt:
+    j do_reset
+
+.org 10 * 4 + {{vector_base_gap}}
+    j do_reset
+
+.org 11 * 4 + {{vector_base_gap}}
+machine_external_interrupt:
+    j do_reset
+
 
 .section .text
 
 # TODO: Halt nonzero harts until we're ready for them.
 
 do_reset:
-    li sp, {{memory_base}} + 0x4000
+    li sp, {{stack_base}}
     li s0, 0x0 # frame pointer
 
     j rust_go
