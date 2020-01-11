@@ -87,6 +87,10 @@ impl Uart {
 
 #[no_mangle]
 extern "C" fn rust_go() -> ! {
+    if register::mhartid::read() != 0 {
+        loop { }
+    }
+
     let u = Uart(constants::UART0_BASE as *mut u8);
 
     u.write_bytes(b"<<<=== ashtOS-fw ===>>>\n");
