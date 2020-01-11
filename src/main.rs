@@ -6,15 +6,16 @@
 use core::panic::PanicInfo;
 use core::ptr::{read_volatile, write_volatile};
 
-use riscv::register::{self, misa::MXL};
+use riscv::register::{self, misa::MXL, mtvec::TrapMode};
 
 mod constants;
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    loop {
-        // do nothing
-    }
+    // TODO: Dump registers and other useful info.
+    let u = Uart(constants::UART0_BASE as *mut u8);
+    u.write_bytes(b"<<<--- ashtOS-fw panic --->>>\n");
+    loop { }
 }
 
 struct Uart(*mut u8);
@@ -52,13 +53,7 @@ impl Uart {
     }
 
     /// provisional
-    fn write_byte_hex(&self, x: u8) {
-        self.write_nibble_hex(x & 0xF);
-        self.write_nibble_hex(x >> 4);
-    }
-
-    /// provisional
-    fn write_int_hex(&self, mut x: usize, digit_count: usize) {
+    fn write_int_hex(&self, x: usize, digit_count: usize) {
         for i in (0..digit_count).rev() {
             self.write_nibble_hex((((0xF << (4 * i)) & x) >> (4 * i)) as u8);
             if i % 4 == 0 && i != 0 {
@@ -225,8 +220,9 @@ extern "C" fn rust_go() -> ! {
 
 #[no_mangle]
 extern "C" fn abort() -> ! {
+    // TODO: Dump registers and other useful info.
     let u = Uart(constants::UART0_BASE as *mut u8);
-    u.write_bytes(b"<<<ashtOS abort>>>\n");
+    u.write_bytes(b"<<<--- ashtOS-fw abort --->>>\n");
     loop { }
 }
 
