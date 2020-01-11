@@ -4,6 +4,11 @@
 
 .org 0x0
 reset:
+    j do_reset
+
+.section .text
+
+do_reset:
     li sp, {{memory_base}} + 0x4000
     li s0, 0x0 # frame pointer
 
