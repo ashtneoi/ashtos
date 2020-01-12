@@ -2,8 +2,6 @@
 rustflags = [
     "-C", "link-arg=-Tlink.ld",
     "-C", "link-dead-code",
-    "-C", "link-arg=--oformat",
-    "-C", "link-arg=binary",
 ]
 
 [build]
