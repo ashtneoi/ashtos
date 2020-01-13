@@ -1,7 +1,7 @@
-.global rust_go
+.globl rust_go
 
 
-.section .vec, "ax"
+.section .ashtos.reset, "ax"
 
 .org 0
 reset:
@@ -10,47 +10,50 @@ reset:
 
     j rust_go
 
-.org 0 * 4 + {{vector_base_gap}}
+
+.section .ashtos.vector_table, "ax"
+
+.org 0 * 4
 synchronous_exception:
     j reset
 
-.org 1 * 4 + {{vector_base_gap}}
+.org 1 * 4
 supervisor_software_interrupt:
     j reset
 
-.org 2 * 4 + {{vector_base_gap}}
+.org 2 * 4
     j reset
 
-.org 3 * 4 + {{vector_base_gap}}
+.org 3 * 4
 machine_software_interrupt:
     j reset
 
-.org 4 * 4 + {{vector_base_gap}}
+.org 4 * 4
 user_timer_interrupt:
     j reset
 
-.org 5 * 4 + {{vector_base_gap}}
+.org 5 * 4
 supervisor_timer_interrupt:
     j reset
 
-.org 6 * 4 + {{vector_base_gap}}
+.org 6 * 4
     j reset
 
-.org 7 * 4 + {{vector_base_gap}}
+.org 7 * 4
 machine_timer_interrupt:
     j reset
 
-.org 8 * 4 + {{vector_base_gap}}
+.org 8 * 4
 user_external_interrupt:
     j reset
 
-.org 9 * 4 + {{vector_base_gap}}
+.org 9 * 4
 supervisor_external_interrupt:
     j reset
 
-.org 10 * 4 + {{vector_base_gap}}
+.org 10 * 4
     j reset
 
-.org 11 * 4 + {{vector_base_gap}}
+.org 11 * 4
 machine_external_interrupt:
     j reset

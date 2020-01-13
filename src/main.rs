@@ -183,8 +183,7 @@ extern "C" fn rust_go() -> ! {
     u.write_byte('\n' as u8);
 
     u.write_bytes(b"Switching to vectored interrupts...");
-    let mtvec_addr =
-        constants::RESET_VECTOR + constants::VECTOR_BASE_GAP;
+    let mtvec_addr = constants::VECTOR_TABLE_BASE;
     unsafe {
         register::mtvec::write(mtvec_addr, TrapMode::Vectored);
     }
