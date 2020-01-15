@@ -2,22 +2,14 @@ MEMORY {
     mem (A) : ORIGIN = {{mem_base}}, LENGTH = {{mem_length}}
 }
 
-ENTRY({{reset_vector}})
+ENTRY(reset)
 
 SECTIONS {
-
     .ashtos.reset {{reset_vector}} : { *(.ashtos.reset) } >mem
+
     .ashtos.vector_table {{vector_table_base}} : {
-        *(.ashtos.vector_table)
+        KEEP(*(.ashtos.vector_table))
     } >mem
 
-    /* BUG?: rust-lld puts other sections at the beginning of `mem` unless we
-     * give an explicit address. */
-
-    .text 0x80008000 : { *(.text) } >mem
-    .rodata 0x80030000 : { *(.rodata) } >mem
-    .sdata 0x80050000 : { *(.sdata) } >mem
-    .shstrtab : { *(.shstrtab) }
-
-    /DISCARD/ : { *(*) }
+    /*.text 0x80004000 : { *(.text) } >mem*/
 }

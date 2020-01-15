@@ -86,7 +86,7 @@ impl Uart {
 }
 
 #[no_mangle]
-extern "C" fn rust_go() -> ! {
+fn main() {
     if register::mhartid::read() != 0 {
         loop { }
     }
@@ -215,6 +215,13 @@ extern "C" fn rust_go() -> ! {
         let x = u.read_byte();
         u.write_byte(x);
     }
+}
+
+#[no_mangle]
+extern "C" fn rust_go() -> ! {
+    main();
+
+    loop { }
 }
 
 #[no_mangle]
