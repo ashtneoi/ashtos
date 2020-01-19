@@ -2,14 +2,14 @@ MEMORY {
     mem (A) : ORIGIN = {{mem_base}}, LENGTH = {{mem_length}}
 }
 
-ENTRY(reset)
+ENTRY(reset);
 
 SECTIONS {
+    . = {{reset_vector}};
     .ashtos.reset {{reset_vector}} : { *(.ashtos.reset) } >mem
 
+    . = {{vector_table_base}};
     .ashtos.vector_table {{vector_table_base}} : {
-        KEEP(*(.ashtos.vector_table))
+        *(.ashtos.vector_table)
     } >mem
-
-    /*.text 0x80004000 : { *(.text) } >mem*/
 }

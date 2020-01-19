@@ -2,6 +2,8 @@
 rustflags = [
     "-C", "link-arg=-Tlink.ld",
 ]
+runner = ["./sim.sh"]
+linker = "riscv64-linux-gnu-ld"
 
 [build]
 target = "riscv64gc-unknown-none-elf"
