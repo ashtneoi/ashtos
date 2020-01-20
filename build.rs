@@ -14,6 +14,8 @@ fn main() {
     environ.insert("reset_vector", "0x80000000");
     environ.insert("vector_table_base", "0x80000100");
     environ.insert("stack_base", "0x80010000");
+    environ.insert("allocation_base", "0x80010000");
+    environ.insert("allocation_cap", "0x10000");
     environ.insert("uart0_base", "0x10000000");
 
     // TODO: Refactor.

@@ -1,11 +1,16 @@
 #![no_std]
 #![no_builtins]
 #![no_main]
+#![feature(alloc_error_handler)]
 #![feature(global_asm)]
 
+extern crate alloc;
+
+use core::alloc::{GlobalAlloc, Layout};
 use core::fmt::{self, Write};
 use core::panic::PanicInfo;
 use core::ptr::{read_volatile, write_volatile};
+use core::sync::atomic::{AtomicBool, Ordering};
 
 use riscv::register::{self, misa::MXL, mtvec::TrapMode};
 
@@ -18,6 +23,58 @@ fn panic(_info: &PanicInfo) -> ! {
     u.write_bytes(b"<<<--- ashtOS-fw panic --->>>\n");
     loop { }
 }
+
+#[alloc_error_handler]
+fn alloc_error(_layout: Layout) -> ! {
+    // TODO: Dump registers and other useful info.
+    let u = Uart(constants::UART0_BASE as *mut u8);
+    u.write_bytes(b"<<<--- ashtOS-fw alloc error --->>>\n");
+    loop { }
+}
+
+#[no_mangle]
+extern "C" fn abort() -> ! {
+    // TODO: Dump registers and other useful info.
+    let u = Uart(constants::UART0_BASE as *mut u8);
+    u.write_bytes(b"<<<--- ashtOS-fw abort --->>>\n");
+    loop { }
+}
+
+struct SingleAllocator {
+    base: usize, // statics don't like raw pointers
+    capacity: usize,
+    in_use: AtomicBool,
+}
+
+unsafe impl GlobalAlloc for SingleAllocator {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        if layout.size() <= self.capacity
+                && (layout.align() - 1) & self.base == 0 {
+            // TODO: SeqCst is very strict. Can we loosen it?
+            let prev_in_use =
+                self.in_use.compare_and_swap(false, true, Ordering::SeqCst);
+            if prev_in_use {
+                ptr::null_mut()
+            } else {
+                self.base as *mut u8
+            }
+        } else {
+            ptr::null_mut()
+        }
+    }
+
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
+        // TODO: SeqCst is very strict. Can we loosen it?
+        self.in_use.store(false, Ordering::SeqCst);
+    }
+}
+
+#[global_allocator]
+static GLOBAL_ALLOCATOR: SingleAllocator = SingleAllocator {
+    base: constants::ALLOCATION_BASE,
+    capacity: constants::ALLOCATION_CAP,
+    in_use: AtomicBool::new(false),
+};
 
 pub struct Uart(*mut u8);
 
@@ -265,14 +322,6 @@ fn main() {
 extern "C" fn rust_go() -> ! {
     main();
 
-    loop { }
-}
-
-#[no_mangle]
-extern "C" fn abort() -> ! {
-    // TODO: Dump registers and other useful info.
-    let u = Uart(constants::UART0_BASE as *mut u8);
-    u.write_bytes(b"<<<--- ashtOS-fw abort --->>>\n");
     loop { }
 }
 
