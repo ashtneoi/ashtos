@@ -129,7 +129,7 @@ fn main() {
         };
         write!(u, "    MXLEN:   {}\n", mxl_str).unwrap();
 
-        static EXT_NAME_ORDER: &[char] = &[
+        static STANDARD_EXT_NAME_ORDER: &[char] = &[
             'I',
             'E',
             'M',
@@ -147,17 +147,51 @@ fn main() {
             'N',
         ];
 
+        // Standard extensions whose ordering is unspecified.
+        static UNSPEC_STANDARD_EXT_NAME_ORDER: &[char] = &[
+            // G means additional standard extensions
+            'H',
+            'K',
+            'O',
+            'R',
+            'S',
+            'U',
+            'W',
+            'Y',
+            'Z',
+        ];
+
         u.write("    exts:    ");
-        for &ext_name in EXT_NAME_ORDER {
+        for &ext_name in STANDARD_EXT_NAME_ORDER {
             if misa.has_extension(ext_name) {
                 u.write_byte(ext_name as u8);
             }
+        }
+        let mut has_unspec_standard_exts = false;
+        for &ext_name in UNSPEC_STANDARD_EXT_NAME_ORDER {
+            if misa.has_extension(ext_name) {
+                has_unspec_standard_exts = true;
+            }
+        }
+        if has_unspec_standard_exts {
+            u.write(" (+");
+            for &ext_name in UNSPEC_STANDARD_EXT_NAME_ORDER {
+                if misa.has_extension(ext_name) {
+                    u.write_byte(ext_name as u8);
+                }
+            }
+            u.write(")");
         }
         u.write("\n");
         if misa.has_extension('G') {
             u.write("    note:    Extension bit \"G\" is set,\n");
             u.write("             but I don't know how to decode\n");
             u.write("             additional standard extensions.\n");
+        }
+        if misa.has_extension('X') {
+            u.write("    note:    Extension bit \"X\" is set,\n");
+            u.write("             but I don't know how to decode\n");
+            u.write("             nonstandard extensions.\n");
         }
     }
 
