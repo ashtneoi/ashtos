@@ -3,6 +3,7 @@
 #![no_main]
 #![feature(global_asm)]
 
+use core::fmt::{self, Write};
 use core::panic::PanicInfo;
 use core::ptr::{read_volatile, write_volatile};
 
@@ -18,10 +19,10 @@ fn panic(_info: &PanicInfo) -> ! {
     loop { }
 }
 
-struct Uart(*mut u8);
+pub struct Uart(*mut u8);
 
 impl Uart {
-    fn try_write_byte(&self, x: u8) -> bool {
+    pub fn try_write_byte(&self, x: u8) -> bool {
         let base = self.0;
         unsafe {
             let line_status_register = read_volatile(base.wrapping_offset(5));
@@ -33,18 +34,22 @@ impl Uart {
         }
     }
 
-    fn write_byte(&self, x: u8) {
+    pub fn write_byte(&self, x: u8) {
         while !self.try_write_byte(x) { /* spin */ }
     }
 
-    fn write_bytes(&self, x: &[u8]) {
+    pub fn write_bytes(&self, x: &[u8]) {
         for byte in x {
             self.write_byte(*byte);
         }
     }
 
+    pub fn write_str(&self, x: &str) {
+        self.write_bytes(x.as_bytes());
+    }
+
     /// provisional
-    fn write_nibble_hex(&self, x: u8) {
+    pub fn write_nibble_hex(&self, x: u8) {
         static HEX_DIGITS: &[u8] = &[
             0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
             0x41, 0x42, 0x43, 0x44, 0x45, 0x46
@@ -53,7 +58,7 @@ impl Uart {
     }
 
     /// provisional
-    fn write_int_hex(&self, x: usize, digit_count: usize) {
+    pub fn write_int_hex(&self, x: usize, digit_count: usize) {
         for i in (0..digit_count).rev() {
             self.write_nibble_hex((((0xF << (4 * i)) & x) >> (4 * i)) as u8);
             if i % 4 == 0 && i != 0 {
@@ -62,7 +67,7 @@ impl Uart {
         }
     }
 
-    fn try_read_byte(&self) -> Option<u8> {
+    pub fn try_read_byte(&self) -> Option<u8> {
         let base = self.0;
         unsafe {
             let line_status_register = read_volatile(base.wrapping_offset(5));
@@ -75,7 +80,7 @@ impl Uart {
         }
     }
 
-    fn read_byte(&self) -> u8 {
+    pub fn read_byte(&self) -> u8 {
         loop {
             let mx = self.try_read_byte();
             if let Some(x) = mx {
@@ -85,45 +90,49 @@ impl Uart {
     }
 }
 
+impl fmt::Write for Uart {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        Uart::write_str(self, s);
+        Ok(())
+    }
+}
+
 #[no_mangle]
 fn main() {
     if register::mhartid::read() != 0 {
         loop { }
     }
 
-    let u = Uart(constants::UART0_BASE as *mut u8);
+    let mut u = Uart(constants::UART0_BASE as *mut u8);
 
-    u.write_bytes(b"<<<=== ashtOS-fw ===>>>\n");
-    u.write_byte('\n' as u8);
+    u.write_str("<<<=== ashtOS-fw ===>>>\n");
+    u.write_str("\n");
 
-    u.write_bytes(b"machine info:\n");
+    u.write_str("machine info:\n");
 
     // misa //
 
     let maybe_misa = register::misa::read();
 
-    u.write_bytes(b"  misa:      0x");
     let misa_bits = match maybe_misa {
         Some(misa) => misa.bits(),
         None => 0,
     };
-    u.write_int_hex(misa_bits, 16);
-    u.write_byte('\n' as u8);
+    write!(&mut u, "  misa:      0x{:016X}\n", misa_bits).unwrap();
 
     if let Some(misa) = maybe_misa {
-        u.write_bytes(b"    MXLEN:   ");
-        u.write_bytes(match misa.mxl() {
-            MXL::XLEN32 => b"32",
-            MXL::XLEN64 => b"64",
-            MXL::XLEN128 => b"128",
-        });
-        u.write_byte('\n' as u8);
+        let mxl_str = match misa.mxl() {
+            MXL::XLEN32 => "32",
+            MXL::XLEN64 => "64",
+            MXL::XLEN128 => "128",
+        };
+        write!(&mut u, "    MXLEN:   {}\n", mxl_str).unwrap();
 
         let mut misa_bits = misa_bits;
         if misa_bits & (1<<6) != 0 {
-            u.write_bytes(b"    note:    extension bit \"G\" is set\n");
-            u.write_bytes(b"             but I don't know how to decode\n");
-            u.write_bytes(b"             additional standard extensions\n");
+            u.write_str("    note:    extension bit \"G\" is set\n");
+            u.write_str("             but I don't know how to decode\n");
+            u.write_str("             additional standard extensions\n");
             misa_bits &= !(1<<6);
         }
         static G_BITS: usize = (1<<8) | (1<<12) | (1<<0) | (1<<5) | (1<<3);
@@ -131,58 +140,50 @@ fn main() {
             misa_bits &= !G_BITS;
             misa_bits |= 1<<6;
         }
-        u.write_bytes(b"    exts:    ");
+        u.write_str("    exts:    ");
         for i in 0..=25 {
             if misa_bits & 1 != 0 {
                 u.write_byte('A' as u8 + i as u8);
             }
             misa_bits >>= 1;
         }
+        u.write_str("\n");
     }
-    u.write_byte('\n' as u8);
 
     // mvendorid //
 
-    u.write_bytes(b"  mvendorid: 0x");
     let mvendorid = match register::mvendorid::read() {
         Some(x) => x.bits(),
         None => 0,
     };
-    u.write_int_hex(mvendorid, 16);
-    u.write_byte('\n' as u8);
+    write!(&mut u, "  mvendorid: 0x{:016X}\n", mvendorid).unwrap();
 
     // marchid //
 
-    u.write_bytes(b"  marchid:   0x");
     let marchid = match register::marchid::read() {
         Some(x) => x.bits(),
         None => 0,
     };
-    u.write_int_hex(marchid, 16);
-    u.write_byte('\n' as u8);
+    write!(&mut u, "  marchid:   0x{:016X}\n", marchid).unwrap();
 
     // mimpid //
 
-    u.write_bytes(b"  mimpid:    0x");
     let mimpid = match register::mimpid::read() {
         Some(x) => x.bits(),
         None => 0,
     };
-    u.write_int_hex(mimpid, 16);
-    u.write_byte('\n' as u8);
+    write!(&mut u, "  mimpid:    0x{:016X}\n", mimpid).unwrap();
 
     // mcause //
 
-    u.write_bytes(b"  mcause:    0x");
     let mcause = register::mcause::read().bits();
-    u.write_int_hex(mcause, 16);
-    u.write_byte('\n' as u8);
+    write!(&mut u, "  mcause:    0x{:016X}", mcause).unwrap();
 
     // ... //
 
-    u.write_byte('\n' as u8);
+    u.write_str("\n");
 
-    u.write_bytes(b"Switching to vectored interrupts...");
+    u.write_str("Switching to vectored interrupts...");
     let mtvec_addr = constants::VECTOR_TABLE_BASE;
     unsafe {
         register::mtvec::write(mtvec_addr, TrapMode::Vectored);
@@ -191,30 +192,27 @@ fn main() {
     let addr_okay = new_mtvec.address() == mtvec_addr;
     let mode_okay = new_mtvec.trap_mode() == TrapMode::Vectored;
     if addr_okay && mode_okay {
-        u.write_bytes(b"done.\n");
+        u.write_str("done.\n");
     } else {
-        u.write_bytes(b"failed!\n");
+        u.write_str("failed!\n");
         if !addr_okay {
             u.write_bytes(b"  - Can't set base address.\n");
-            u.write_bytes(b"    Wanted 0x");
-            u.write_int_hex(mtvec_addr, 16);
-            u.write_bytes(b".\n");
-            u.write_bytes(b"    Got 0x");
-            u.write_int_hex(new_mtvec.address(), 16);
-            u.write_bytes(b".\n");
+            write!(
+                &mut u, "    Wanted 0x{:016X}.\n", mtvec_addr
+            ).unwrap();
+            write!(
+                &mut u, "    Got    0x{:016X}.\n", new_mtvec.address()
+            ).unwrap();
         }
         if !mode_okay {
-            u.write_bytes(
-                b"  - Can't set mode. Wrote vectored, read direct.\n"
+            u.write_str(
+                "  - Can't set mode. Wrote 'vectored', read 'direct'.\n"
             );
         }
         abort();
     }
 
-    loop {
-        let x = u.read_byte();
-        u.write_byte(x);
-    }
+    loop { }
 }
 
 #[no_mangle]
