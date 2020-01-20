@@ -129,26 +129,36 @@ fn main() {
         };
         write!(u, "    MXLEN:   {}\n", mxl_str).unwrap();
 
-        let mut misa_bits = misa_bits;
-        if misa_bits & (1<<6) != 0 {
-            u.write("    note:    extension bit \"G\" is set\n");
-            u.write("             but I don't know how to decode\n");
-            u.write("             additional standard extensions\n");
-            misa_bits &= !(1<<6);
-        }
-        static G_BITS: usize = (1<<8) | (1<<12) | (1<<0) | (1<<5) | (1<<3);
-        if misa_bits & G_BITS == G_BITS {
-            misa_bits &= !G_BITS;
-            misa_bits |= 1<<6;
-        }
+        static EXT_NAME_ORDER: &[char] = &[
+            'I',
+            'E',
+            'M',
+            'A',
+            'F',
+            'D',
+            'Q',
+            'L',
+            'C',
+            'B',
+            'J',
+            'T',
+            'P',
+            'V',
+            'N',
+        ];
+
         u.write("    exts:    ");
-        for i in 0..=25 {
-            if misa_bits & 1 != 0 {
-                u.write_byte('A' as u8 + i as u8);
+        for &ext_name in EXT_NAME_ORDER {
+            if misa.has_extension(ext_name) {
+                u.write_byte(ext_name as u8);
             }
-            misa_bits >>= 1;
         }
         u.write("\n");
+        if misa.has_extension('G') {
+            u.write("    note:    Extension bit \"G\" is set,\n");
+            u.write("             but I don't know how to decode\n");
+            u.write("             additional standard extensions.\n");
+        }
     }
 
     // mvendorid //
