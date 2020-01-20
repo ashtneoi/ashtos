@@ -44,7 +44,7 @@ impl Uart {
         }
     }
 
-    pub fn write_str(&self, x: &str) {
+    pub fn write(&self, x: &str) {
         self.write_bytes(x.as_bytes());
     }
 
@@ -92,7 +92,7 @@ impl Uart {
 
 impl fmt::Write for Uart {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        Uart::write_str(self, s);
+        self.write(s);
         Ok(())
     }
 }
@@ -104,11 +104,12 @@ fn main() {
     }
 
     let mut u = Uart(constants::UART0_BASE as *mut u8);
+    let u = &mut u;
 
-    u.write_str("<<<=== ashtOS-fw ===>>>\n");
-    u.write_str("\n");
+    u.write("<<<=== ashtOS-fw ===>>>\n");
+    u.write("\n");
 
-    u.write_str("machine info:\n");
+    u.write("machine info:\n");
 
     // misa //
 
@@ -118,7 +119,7 @@ fn main() {
         Some(misa) => misa.bits(),
         None => 0,
     };
-    write!(&mut u, "  misa:      0x{:016X}\n", misa_bits).unwrap();
+    write!(u, "  misa:      0x{:016X}\n", misa_bits).unwrap();
 
     if let Some(misa) = maybe_misa {
         let mxl_str = match misa.mxl() {
@@ -126,13 +127,13 @@ fn main() {
             MXL::XLEN64 => "64",
             MXL::XLEN128 => "128",
         };
-        write!(&mut u, "    MXLEN:   {}\n", mxl_str).unwrap();
+        write!(u, "    MXLEN:   {}\n", mxl_str).unwrap();
 
         let mut misa_bits = misa_bits;
         if misa_bits & (1<<6) != 0 {
-            u.write_str("    note:    extension bit \"G\" is set\n");
-            u.write_str("             but I don't know how to decode\n");
-            u.write_str("             additional standard extensions\n");
+            u.write("    note:    extension bit \"G\" is set\n");
+            u.write("             but I don't know how to decode\n");
+            u.write("             additional standard extensions\n");
             misa_bits &= !(1<<6);
         }
         static G_BITS: usize = (1<<8) | (1<<12) | (1<<0) | (1<<5) | (1<<3);
@@ -140,14 +141,14 @@ fn main() {
             misa_bits &= !G_BITS;
             misa_bits |= 1<<6;
         }
-        u.write_str("    exts:    ");
+        u.write("    exts:    ");
         for i in 0..=25 {
             if misa_bits & 1 != 0 {
                 u.write_byte('A' as u8 + i as u8);
             }
             misa_bits >>= 1;
         }
-        u.write_str("\n");
+        u.write("\n");
     }
 
     // mvendorid //
@@ -156,7 +157,7 @@ fn main() {
         Some(x) => x.bits(),
         None => 0,
     };
-    write!(&mut u, "  mvendorid: 0x{:016X}\n", mvendorid).unwrap();
+    write!(u, "  mvendorid: 0x{:016X}\n", mvendorid).unwrap();
 
     // marchid //
 
@@ -164,7 +165,7 @@ fn main() {
         Some(x) => x.bits(),
         None => 0,
     };
-    write!(&mut u, "  marchid:   0x{:016X}\n", marchid).unwrap();
+    write!(u, "  marchid:   0x{:016X}\n", marchid).unwrap();
 
     // mimpid //
 
@@ -172,18 +173,18 @@ fn main() {
         Some(x) => x.bits(),
         None => 0,
     };
-    write!(&mut u, "  mimpid:    0x{:016X}\n", mimpid).unwrap();
+    write!(u, "  mimpid:    0x{:016X}\n", mimpid).unwrap();
 
     // mcause //
 
     let mcause = register::mcause::read().bits();
-    write!(&mut u, "  mcause:    0x{:016X}", mcause).unwrap();
+    write!(u, "  mcause:    0x{:016X}", mcause).unwrap();
 
     // ... //
 
-    u.write_str("\n");
+    u.write("\n");
 
-    u.write_str("Switching to vectored interrupts...");
+    u.write("Switching to vectored interrupts...");
     let mtvec_addr = constants::VECTOR_TABLE_BASE;
     unsafe {
         register::mtvec::write(mtvec_addr, TrapMode::Vectored);
@@ -192,20 +193,20 @@ fn main() {
     let addr_okay = new_mtvec.address() == mtvec_addr;
     let mode_okay = new_mtvec.trap_mode() == TrapMode::Vectored;
     if addr_okay && mode_okay {
-        u.write_str("done.\n");
+        u.write("done.\n");
     } else {
-        u.write_str("failed!\n");
+        u.write("failed!\n");
         if !addr_okay {
             u.write_bytes(b"  - Can't set base address.\n");
             write!(
-                &mut u, "    Wanted 0x{:016X}.\n", mtvec_addr
+                u, "    Wanted 0x{:016X}.\n", mtvec_addr
             ).unwrap();
             write!(
-                &mut u, "    Got    0x{:016X}.\n", new_mtvec.address()
+                u, "    Got    0x{:016X}.\n", new_mtvec.address()
             ).unwrap();
         }
         if !mode_okay {
-            u.write_str(
+            u.write(
                 "  - Can't set mode. Wrote 'vectored', read 'direct'.\n"
             );
         }
