@@ -136,7 +136,7 @@ fn main() {
             misa_bits &= !(1<<6);
         }
         static G_BITS: usize = (1<<8) | (1<<12) | (1<<0) | (1<<5) | (1<<3);
-        if misa_bits & G_BITS != 0 {
+        if misa_bits & G_BITS == G_BITS {
             misa_bits &= !G_BITS;
             misa_bits |= 1<<6;
         }
