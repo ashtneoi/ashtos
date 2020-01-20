@@ -147,9 +147,9 @@ fn main() {
             'N',
         ];
 
-        // Standard extensions whose ordering is unspecified.
-        static UNSPEC_STANDARD_EXT_NAME_ORDER: &[char] = &[
-            // G means additional standard extensions
+        // Extension bits whose ordering or meaning is unspecified.
+        static UNSPEC_EXT_NAME_ORDER: &[char] = &[
+            'G',
             'H',
             'K',
             'O',
@@ -157,6 +157,7 @@ fn main() {
             'S',
             'U',
             'W',
+            'X',
             'Y',
             'Z',
         ];
@@ -168,14 +169,14 @@ fn main() {
             }
         }
         let mut has_unspec_standard_exts = false;
-        for &ext_name in UNSPEC_STANDARD_EXT_NAME_ORDER {
+        for &ext_name in UNSPEC_EXT_NAME_ORDER {
             if misa.has_extension(ext_name) {
                 has_unspec_standard_exts = true;
             }
         }
         if has_unspec_standard_exts {
             u.write(" (+");
-            for &ext_name in UNSPEC_STANDARD_EXT_NAME_ORDER {
+            for &ext_name in UNSPEC_EXT_NAME_ORDER {
                 if misa.has_extension(ext_name) {
                     u.write_byte(ext_name as u8);
                 }
