@@ -9,7 +9,7 @@ extern crate alloc;
 use core::alloc::{GlobalAlloc, Layout};
 use core::fmt::{self, Write};
 use core::panic::PanicInfo;
-use core::ptr::{read_volatile, write_volatile};
+use core::ptr;
 use core::sync::atomic::{AtomicBool, Ordering};
 
 use riscv::register::{self, misa::MXL, mtvec::TrapMode};
@@ -82,10 +82,10 @@ impl Uart {
     pub fn try_write_byte(&self, x: u8) -> bool {
         let base = self.0;
         unsafe {
-            let line_status_register = read_volatile(base.wrapping_offset(5));
+            let line_status_register = base.wrapping_offset(5).read_volatile();
             let ready = line_status_register & (1<<5) != 0; // THRE
             if ready {
-                write_volatile(base, x);
+                base.write_volatile(x);
             }
             return ready;
         }
@@ -127,10 +127,10 @@ impl Uart {
     pub fn try_read_byte(&self) -> Option<u8> {
         let base = self.0;
         unsafe {
-            let line_status_register = read_volatile(base.wrapping_offset(5));
+            let line_status_register = base.wrapping_offset(5).read_volatile();
             let ready = line_status_register & (1<<0) != 0; // DR
             if ready {
-                return Some(read_volatile(base));
+                return Some(base.read_volatile());
             } else {
                 return None;
             }
