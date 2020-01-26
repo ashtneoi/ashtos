@@ -14,7 +14,7 @@ unsafe impl<T> Sync for Mutex<T> { }
 
 impl<T> Mutex<T> {
     pub const fn new(t: T) -> Self {
-        Self { inner: t, locked: AtomicBool::new(true) }
+        Self { inner: t, locked: AtomicBool::new(false) }
     }
 
     fn try_lock(&self) -> bool {
@@ -37,6 +37,7 @@ impl<T> Mutex<T> {
     }
 
     pub fn with_lock<'a>(&'a self) -> MutexGuard<'a, T> {
+        self.lock();
         MutexGuard {
             inner: &self.inner as *const T as *mut T,
             mutex: self,
