@@ -1,18 +1,17 @@
 use core::ops::{Deref, DerefMut, Drop};
-use core::marker::PhantomData;
 use core::sync::atomic::{
     AtomicBool,
     Ordering,
 };
 
-pub(crate) struct Mutex<T> {
+pub(crate) struct SpinLock<T> {
     inner: T,
     locked: AtomicBool,
 }
 
-unsafe impl<T> Sync for Mutex<T> { }
+unsafe impl<T> Sync for SpinLock<T> { }
 
-impl<T> Mutex<T> {
+impl<T> SpinLock<T> {
     pub const fn new(t: T) -> Self {
         Self { inner: t, locked: AtomicBool::new(false) }
     }
@@ -27,7 +26,7 @@ impl<T> Mutex<T> {
         !already_locked
     }
 
-    fn lock_spin(&self) {
+    fn lock(&self) {
         while !self.try_lock() { }
     }
 
@@ -36,21 +35,21 @@ impl<T> Mutex<T> {
         self.locked.store(false, Ordering::SeqCst);
     }
 
-    pub fn with_lock<'a>(&'a self) -> MutexGuard<'a, T> {
+    pub fn with_lock<'a>(&'a self) -> SpinLockGuard<'a, T> {
         self.lock();
-        MutexGuard {
+        SpinLockGuard {
             inner: &self.inner as *const T as *mut T,
-            mutex: self,
+            lock: self,
         }
     }
 }
 
-pub(crate) struct MutexGuard<'a, T> {
+pub(crate) struct SpinLockGuard<'a, T> {
     inner: *mut T,
-    mutex: &'a Mutex<T>,
+    lock: &'a SpinLock<T>,
 }
 
-impl<'a, T> Deref for MutexGuard<'a, T> {
+impl<'a, T> Deref for SpinLockGuard<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -58,14 +57,14 @@ impl<'a, T> Deref for MutexGuard<'a, T> {
     }
 }
 
-impl<'a, T> DerefMut for MutexGuard<'a, T> {
+impl<'a, T> DerefMut for SpinLockGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut *self.inner }
     }
 }
 
-impl<'a, T> Drop for MutexGuard<'a, T> {
+impl<'a, T> Drop for SpinLockGuard<'a, T> {
     fn drop(&mut self) {
-        self.mutex.unlock();
+        self.lock.unlock();
     }
 }

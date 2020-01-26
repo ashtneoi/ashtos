@@ -11,9 +11,8 @@ use core::alloc::{GlobalAlloc, Layout};
 use core::fmt::{self, Write};
 use core::panic::PanicInfo;
 use core::ptr;
-use core::sync::atomic::{AtomicBool, Ordering};
 use riscv::register::{self, misa::MXL, mtvec::TrapMode};
-use sync::Mutex;
+use sync::SpinLock;
 
 mod constants;
 mod sync;
@@ -45,7 +44,7 @@ extern "C" fn abort() -> ! {
 struct SingleAllocator {
     base: usize, // statics don't like raw pointers
     capacity: usize,
-    in_use: Mutex<bool>,
+    in_use: SpinLock<bool>,
 }
 
 unsafe impl GlobalAlloc for SingleAllocator {
@@ -72,7 +71,7 @@ unsafe impl GlobalAlloc for SingleAllocator {
 static GLOBAL_ALLOCATOR: SingleAllocator = SingleAllocator {
     base: constants::ALLOCATION_BASE,
     capacity: constants::ALLOCATION_CAP,
-    in_use: Mutex::new(false),
+    in_use: SpinLock::new(false),
 };
 
 pub struct Uart(*mut u8);
@@ -314,8 +313,15 @@ fn main() {
         abort();
     }
 
-    let s = "Hello world!\n".to_string();
-    u.write(&s);
+    {
+        let s = "Hello world!\n".to_string();
+        u.write(&s);
+    }
+
+    {
+        let s = "I am using spinlocks!\n".to_string();
+        u.write(&s);
+    }
 
     loop { }
 }
