@@ -6,15 +6,17 @@
 
 extern crate alloc;
 
+use alloc::string::ToString;
 use core::alloc::{GlobalAlloc, Layout};
 use core::fmt::{self, Write};
 use core::panic::PanicInfo;
 use core::ptr;
 use core::sync::atomic::{AtomicBool, Ordering};
-
 use riscv::register::{self, misa::MXL, mtvec::TrapMode};
+use sync::Mutex;
 
 mod constants;
+mod sync;
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -43,21 +45,16 @@ extern "C" fn abort() -> ! {
 struct SingleAllocator {
     base: usize, // statics don't like raw pointers
     capacity: usize,
-    in_use: AtomicBool,
+    in_use: Mutex<bool>,
 }
 
 unsafe impl GlobalAlloc for SingleAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         if layout.size() <= self.capacity
                 && (layout.align() - 1) & self.base == 0 {
-            // TODO: SeqCst is very strict. Can we loosen it?
-            let prev_in_use =
-                self.in_use.compare_and_swap(false, true, Ordering::SeqCst);
-            if prev_in_use {
-                ptr::null_mut()
-            } else {
-                self.base as *mut u8
-            }
+            let mut in_use_guard = self.in_use.with_lock();
+            *in_use_guard = true;
+            self.base as *mut u8
         } else {
             ptr::null_mut()
         }
@@ -65,7 +62,9 @@ unsafe impl GlobalAlloc for SingleAllocator {
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
         // TODO: SeqCst is very strict. Can we loosen it?
-        self.in_use.store(false, Ordering::SeqCst);
+
+        let mut in_use_guard = self.in_use.with_lock();
+        *in_use_guard = false;
     }
 }
 
@@ -73,7 +72,7 @@ unsafe impl GlobalAlloc for SingleAllocator {
 static GLOBAL_ALLOCATOR: SingleAllocator = SingleAllocator {
     base: constants::ALLOCATION_BASE,
     capacity: constants::ALLOCATION_CAP,
-    in_use: AtomicBool::new(false),
+    in_use: Mutex::new(false),
 };
 
 pub struct Uart(*mut u8);
@@ -314,6 +313,9 @@ fn main() {
         }
         abort();
     }
+
+    let s = "Hello world!\n".to_string();
+    u.write(&s);
 
     loop { }
 }
