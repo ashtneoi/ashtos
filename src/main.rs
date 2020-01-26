@@ -60,8 +60,6 @@ unsafe impl GlobalAlloc for SingleAllocator {
     }
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        // TODO: SeqCst is very strict. Can we loosen it?
-
         let mut in_use_guard = self.in_use.with_lock();
         *in_use_guard = false;
     }

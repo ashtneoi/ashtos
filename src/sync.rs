@@ -17,11 +17,10 @@ impl<T> SpinLock<T> {
     }
 
     fn try_lock(&self) -> bool {
-        // TODO: SeqCst is very strict. Can we loosen it?
         let already_locked = self.locked.compare_and_swap(
             false,
             true,
-            Ordering::SeqCst,
+            Ordering::Acquire,
         );
         !already_locked
     }
@@ -31,8 +30,7 @@ impl<T> SpinLock<T> {
     }
 
     fn unlock(&self) {
-        // TODO: SeqCst is very strict. Can we loosen it?
-        self.locked.store(false, Ordering::SeqCst);
+        self.locked.store(false, Ordering::Release);
     }
 
     pub fn with_lock<'a>(&'a self) -> SpinLockGuard<'a, T> {
