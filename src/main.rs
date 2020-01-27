@@ -54,7 +54,7 @@ unsafe impl GlobalAlloc for SingleAllocator {
         if layout.size() <= self.capacity
                 && (layout.align() - 1) & (self.base as usize) == 0 {
             {
-                let mut in_use_guard = self.in_use.with_lock();
+                let mut in_use_guard = self.in_use.lock();
                 *in_use_guard = true;
             }
             self.base
@@ -64,7 +64,7 @@ unsafe impl GlobalAlloc for SingleAllocator {
     }
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        let mut in_use_guard = self.in_use.with_lock();
+        let mut in_use_guard = self.in_use.lock();
         *in_use_guard = false;
     }
 }

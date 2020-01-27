@@ -25,16 +25,18 @@ impl<T> SpinLock<T> {
         !already_locked
     }
 
-    fn lock(&self) {
+    // TODO: Are `lock()` and `unlock()` unsafe?
+
+    fn just_lock(&self) {
         while !self.try_lock() { }
     }
 
-    fn unlock(&self) {
+    fn just_unlock(&self) {
         self.locked.store(false, Ordering::Release);
     }
 
-    pub fn with_lock<'a>(&'a self) -> SpinLockGuard<'a, T> {
-        self.lock();
+    pub fn lock<'a>(&'a self) -> SpinLockGuard<'a, T> {
+        self.just_lock();
         SpinLockGuard {
             inner: &self.inner as *const T as *mut T,
             lock: self,
@@ -63,6 +65,6 @@ impl<'a, T> DerefMut for SpinLockGuard<'a, T> {
 
 impl<'a, T> Drop for SpinLockGuard<'a, T> {
     fn drop(&mut self) {
-        self.lock.unlock();
+        self.lock.just_unlock();
     }
 }
