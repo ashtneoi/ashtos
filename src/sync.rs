@@ -5,8 +5,8 @@ use core::sync::atomic::{
 };
 
 pub(crate) struct SpinLock<T> {
-    inner: T,
     locked: AtomicBool,
+    inner: T,
 }
 
 unsafe impl<T> Sync for SpinLock<T> { }
