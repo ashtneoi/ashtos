@@ -55,6 +55,9 @@ unsafe impl GlobalAlloc for SingleAllocator {
                 && (layout.align() - 1) & (self.base as usize) == 0 {
             {
                 let mut in_use_guard = self.in_use.lock();
+                if *in_use_guard {
+                    return ptr::null_mut();
+                }
                 *in_use_guard = true;
             }
             self.base
