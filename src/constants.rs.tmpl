@@ -1,4 +1,4 @@
 pub(crate) const UART0_BASE: usize = {{uart0_base}};
 pub(crate) const VECTOR_TABLE_BASE: usize = {{vector_table_base}};
-pub(crate) const ALLOCATION_BASE: usize = {{allocation_base}};
+pub(crate) const ALLOCATION_BASE: *mut u8 = {{allocation_base}} as *mut u8;
 pub(crate) const ALLOCATION_CAP: usize = {{allocation_cap}};

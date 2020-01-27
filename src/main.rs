@@ -42,18 +42,22 @@ extern "C" fn abort() -> ! {
 }
 
 struct SingleAllocator {
-    base: usize, // statics don't like raw pointers
+    base: *mut u8,
     capacity: usize,
     in_use: SpinLock<bool>,
 }
 
+unsafe impl Sync for SingleAllocator { }
+
 unsafe impl GlobalAlloc for SingleAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         if layout.size() <= self.capacity
-                && (layout.align() - 1) & self.base == 0 {
-            let mut in_use_guard = self.in_use.with_lock();
-            *in_use_guard = true;
-            self.base as *mut u8
+                && (layout.align() - 1) & (self.base as usize) == 0 {
+            {
+                let mut in_use_guard = self.in_use.with_lock();
+                *in_use_guard = true;
+            }
+            self.base
         } else {
             ptr::null_mut()
         }
