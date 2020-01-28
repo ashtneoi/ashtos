@@ -7,15 +7,13 @@
 extern crate alloc;
 
 use alloc::string::ToString;
-use alloc::vec::Vec;
 use core::alloc::{GlobalAlloc, Layout};
 use core::fmt::{self, Write};
 use core::panic::PanicInfo;
 use core::ptr;
+use crate::sync::SpinLock;
 use riscv::register::{self, misa::MXL, mtvec::TrapMode};
-use sync::SpinLock;
 
-mod local_alloc;
 mod constants;
 mod sync;
 
@@ -167,10 +165,6 @@ fn main() {
 
     let mut u = Uart(constants::UART0_BASE as *mut u8);
     let u = &mut u;
-
-    let mut la_vec = Vec::with_capacity(1024);
-    la_vec.resize(1024, 0);
-    let mut la = local_alloc::SingleLocalAllocator::new(&mut la_vec);
 
     u.write("<<<=== ashtOS-fw ===>>>\n");
     u.write("\n");
