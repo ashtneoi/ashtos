@@ -84,7 +84,7 @@ fn dump_ascii_strings(
     let mut prev_is_graphic = false;
     let mut no_strings = true;
     for offset in 0..len {
-        let val = unsafe { ptr::read_volatile(base.wrapping_add(offset)) };
+        let val = unsafe { ptr::read_volatile(base.add(offset)) };
         if val.is_ascii_graphic() {
             if !prev_is_graphic && !no_strings {
                 writer.write_char(' ')?;
@@ -106,7 +106,7 @@ impl Uart {
     pub fn try_write_byte(&self, x: u8) -> bool {
         let base = self.0;
         unsafe {
-            let line_status_register = base.wrapping_offset(5).read_volatile();
+            let line_status_register = base.offset(5).read_volatile();
             let ready = line_status_register & (1<<5) != 0; // THRE
             if ready {
                 base.write_volatile(x);
@@ -151,7 +151,7 @@ impl Uart {
     pub fn try_read_byte(&self) -> Option<u8> {
         let base = self.0;
         unsafe {
-            let line_status_register = base.wrapping_offset(5).read_volatile();
+            let line_status_register = base.offset(5).read_volatile();
             let ready = line_status_register & (1<<0) != 0; // DR
             if ready {
                 return Some(base.read_volatile());
