@@ -6,7 +6,6 @@
 
 extern crate alloc;
 
-use alloc::string::ToString;
 use core::alloc::{GlobalAlloc, Layout};
 use core::fmt::{self, Write};
 use core::panic::PanicInfo;
@@ -78,6 +77,28 @@ static GLOBAL_ALLOCATOR: SingleAllocator = SingleAllocator {
     capacity: constants::ALLOCATION_CAP,
     in_use: SpinLock::new(false),
 };
+
+fn dump_ascii_strings(
+    mut writer: impl Write, base: *const u8, len: usize
+) -> fmt::Result {
+    let mut prev_is_graphic = false;
+    let mut no_strings = true;
+    for offset in 0..len {
+        let val = unsafe { ptr::read_volatile(base.wrapping_add(offset)) };
+        if val.is_ascii_graphic() {
+            if !prev_is_graphic && !no_strings {
+                writer.write_char(' ')?;
+            }
+            prev_is_graphic = true;
+            no_strings = false;
+            writer.write_char(val as char)?;
+        } else {
+            prev_is_graphic = false;
+        }
+    }
+
+    Ok(())
+}
 
 pub struct Uart(*mut u8);
 
@@ -318,15 +339,9 @@ fn main() {
         abort();
     }
 
-    {
-        let s = "Hello world!\n".to_string();
-        u.write(&s);
-    }
-
-    {
-        let s = "I am using spinlocks!\n".to_string();
-        u.write(&s);
-    }
+    u.write("Strings: ");
+    dump_ascii_strings(&mut *u, 0x1000 as *const u8, 0x11000).unwrap();
+    u.write("\n");
 
     loop { }
 }
