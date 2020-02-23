@@ -1,9 +1,13 @@
 // TODO: Make this build script self-hostable under ashtOS.
 
+// FIXME: This isn't supposed to modify files except under OUT_DIR.
+
 use mint_template_engine;
 use std::collections::HashMap;
+use std::env;
 use std::fs::File;
 use std::io::prelude::*;
+use std::process::Command;
 
 fn main() {
     // TODO: Don't use `Result::unwrap()`.
@@ -49,4 +53,9 @@ fn main() {
             f.write(b"\n").unwrap();
         }
     }
+
+    let rustc_path = env::var("RUSTC").unwrap();
+    let version_line =
+        Command::new(rustc_path).arg("--version").output().unwrap().stdout;
+    println!("{}", String::from_utf8(version_line).unwrap());
 }
